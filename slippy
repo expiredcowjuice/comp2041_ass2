@@ -1,0 +1,155 @@
+#!/usr/bin/env python3
+import re, sys
+
+QUIT = 'q'
+PRINT = 'p'
+DELETE = 'd'
+SUBSTITUTE = 's'
+EMPTY = ''
+
+NO_PRINT_COMMAND = '-n'
+
+# for q - quit command
+def quit_command(address, no_print):
+    if no_print : return
+    for count, line in enumerate(sys.stdin):
+        line = line.strip()
+        print(line)
+        if (type(address) is int):
+            if address == count + 1:
+                break
+
+        else:
+            if re.search(address, line):
+                break
+
+# for p - print command
+def print_command(address, no_print):
+    for count, line in enumerate(sys.stdin):
+        line = line.strip()
+        if not no_print :
+            print(line)
+        if (type(address) is int):
+            if address == count + 1:
+                print(line)
+
+        else:
+            if re.search(address, line):
+                print(line)
+
+# for d - delete command
+def delete_command(address, no_print):
+    if no_print : return
+    for count, line in enumerate(sys.stdin):
+        line = line.strip()
+        if (type(address) is int):
+            if address != count + 1:
+                print(line)
+
+        else:
+            if not re.search(address, line):
+                print(line)
+
+# for s - delete command
+def substitute_command(pattern, replacement, address, no_print, **kwargs):
+    for count, line in enumerate(sys.stdin):
+        unchanged = line.strip()
+        line = line.strip()
+        #search if linecount = address OR pattern is in count
+        if (type(address) is int):
+            if address == count + 1:
+                line = re.sub(pattern, replacement, line, **kwargs)
+
+        elif (type(address) is str):
+            if re.search(address, line):
+                line = re.sub(pattern, replacement, line, **kwargs)
+        else:    
+            line = re.sub(pattern, replacement, line, **kwargs)
+        if no_print :
+            if line != unchanged:
+                print(line)
+        else:
+            print(line)
+
+# for if no command
+def no_command(no_print):
+    if no_print : return
+    for count, line in enumerate(sys.stdin):
+        line = line.strip()
+        print(line)
+
+
+#parsing arg
+if __name__ == '__main__':
+    
+    no_print_option = False
+    
+    pattern = None
+    address = None
+    replacement = None
+    command = None
+    line_num = None
+    if sys.argv[1] == NO_PRINT_COMMAND:
+        no_print_option = True
+        argument = sys.argv[2]
+    else:
+        argument = sys.argv[1]
+    
+    #if substitution w a regex address
+    if re.search(r"(\S)(.*\1){3,}", argument):
+        delim = re.search(r"(\S)(.*\1){3,}", argument).group(1)
+        arg_split = argument.split(delim)
+        address = arg_split[1]
+        command = arg_split[2]
+        pattern = arg_split[3]
+        replacement = arg_split[4]
+        flag = arg_split[5]
+    #if substitution w an integer address
+    elif re.search(r"(\S)(.*\1){2,}", argument):
+        delim = re.search(r"(\S)(.*\1){2,}", argument).group(1)
+        arg_split = argument.split(delim)
+        command = arg_split[0]
+        try:
+            address = int(command[:-1])
+            command = command[-1]
+        except ValueError:
+            pass
+        pattern = arg_split[1]
+        replacement = arg_split[2]
+        flag = arg_split[3]
+    #if regex address
+    elif re.search(r"\/.*\/", argument):
+        address = argument.split('/')[1]
+        command = argument.split('/')[2]
+    else:
+        try:
+            command = argument[-1]
+        except IndexError:
+            pass
+
+        try:
+            address = int(argument[:-1])
+        except ValueError:
+            #if no num prior command
+            address = -1
+
+    if (command == QUIT) :
+        if (address == -1): address = 1
+        quit_command(address, no_print_option)
+    elif (command == PRINT) :
+        if (address == -1): address = '.*' 
+        print_command(address, no_print_option)
+    elif (command == DELETE) :
+        if (address == -1): address = '.*' 
+        delete_command(address, no_print_option)
+    elif (command == SUBSTITUTE) :
+        if (flag == 'g') : substitute_command(pattern, replacement, address, no_print_option)
+        else : substitute_command(pattern, replacement, address, no_print_option, count=1)
+    elif (command == EMPTY) :
+        no_command(no_print_option)
+    else :
+        print(f'{sys.argv[0]}: command line: invalid command')
+
+    #print(f"address {address}, pattern {pattern}, replacement {replacement}, command {command}")
+
+
